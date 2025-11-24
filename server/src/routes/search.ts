@@ -155,7 +155,7 @@ router.get('/:id/sublocations/download', authenticateToken, async (req, res) => 
     }
 });
 
-// PHASE 2: Start scraping phase (after user confirms)
+// PHASE 2: Start scraping phase (transition to UI state)
 router.post('/:id/scrape', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
@@ -167,22 +167,47 @@ router.post('/:id/scrape', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Search not found' });
         }
 
-        if (search.phase !== 'ready_to_scrape') {
+        if (search.phase !== 'ready_to_scrape' && search.phase !== 'scraping') {
             return res.status(400).json({ error: 'Search is not ready for scraping' });
         }
 
-        // Update status to scraping
-        await db.update(searches).set({
-            status: 'scraping',
-            phase: 'scraping'
-        }).where(eq(searches.id, Number(id)));
-
-        // Start scraping in background
-        processScraping(Number(id), search.location, search.keyword);
+        // Update status to scraping if not already
+        if (search.status !== 'scraping') {
+            await db.update(searches).set({
+                status: 'scraping',
+                phase: 'scraping'
+            }).where(eq(searches.id, Number(id)));
+        }
 
         res.json({ searchId: Number(id), status: 'scraping', phase: 'scraping' });
     } catch (error) {
         console.error('Start scraping error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Scrape a specific sub-location
+router.post('/:id/sublocations/:subId/scrape', authenticateToken, async (req, res) => {
+    const { id, subId } = req.params;
+
+    try {
+        const sublocationResult = await db.select().from(sublocations)
+            .where(and(eq(sublocations.id, Number(subId)), eq(sublocations.searchId, Number(id))));
+        const sublocation = sublocationResult[0];
+
+        if (!sublocation) {
+            return res.status(404).json({ error: 'Sub-location not found' });
+        }
+
+        const searchResult = await db.select().from(searches).where(eq(searches.id, Number(id)));
+        const search = searchResult[0];
+
+        // Trigger background scraping for this specific sub-location
+        scrapeSingleSubLocation(Number(id), search.keyword, sublocation);
+
+        res.json({ status: 'scraping', sublocationId: sublocation.id });
+    } catch (error) {
+        console.error('Scrape sub-location error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -242,126 +267,86 @@ async function discoverSubLocations(searchId: number, location: string) {
     }
 }
 
-// Background job: Systematic scraping of all sublocations
-async function processScraping(searchId: number, location: string, keyword: string) {
+// Helper: Scrape a single sub-location
+async function scrapeSingleSubLocation(searchId: number, keyword: string, sublocation: any) {
     const mapsScraper = new MapsScraper();
 
     try {
+        console.log(`\n=== Scraping sublocation: ${sublocation.name} ===`);
+        await db.update(sublocations).set({ status: 'scraping' }).where(eq(sublocations.id, sublocation.id));
+
         await mapsScraper.init();
 
-        // Get all sublocations for this search
-        const sublocationsList = await db.select().from(sublocations).where(eq(sublocations.searchId, searchId));
+        // Search using the combined query format
+        const combinedQuery = `${keyword} around ${sublocation.name}`;
+        console.log(`Searching for: ${combinedQuery}`);
 
-        console.log(`Starting systematic scraping of ${sublocationsList.length} sub-locations...`);
+        await mapsScraper.searchLocation(combinedQuery);
 
-        // Scrape each sublocation systematically
-        for (const sublocation of sublocationsList) {
+        // Extract ALL results
+        const results = await mapsScraper.scrollAndExtract();
+        console.log(`Found ${results.length} businesses in ${sublocation.name}`);
+
+        // Save results with duplicate detection
+        let savedCount = 0;
+        for (const result of results) {
             try {
-                console.log(`\n=== Scraping sublocation: ${sublocation.name} ===`);
-
-                // Update sublocation status
-                await db.update(sublocations).set({ status: 'scraping' }).where(eq(sublocations.id, sublocation.id));
-
-                // Search using the combined query format requested by the user
-                // e.g. "HRM around lugbe, Abuja, Nigeria"
-                const combinedQuery = `${keyword} around ${sublocation.name}`;
-                console.log(`Searching for: ${combinedQuery}`);
-
-                await mapsScraper.searchLocation(combinedQuery);
-                // await mapsScraper.searchKeywordsInArea(keyword); // Removed as we now use combined query
-
-                // Extract ALL results (not limited to 20)
-                const results = await mapsScraper.scrollAndExtract();
-                console.log(`Found ${results.length} businesses in ${sublocation.name}`);
-
-                // Save results with duplicate detection
-                let savedCount = 0;
-                for (const result of results) {
-                    try {
-                        // Check for duplicates by placeId first
-                        if (result.placeId) {
-                            const existingByPlaceId = await db.select().from(businesses)
-                                .where(eq(businesses.placeId, result.placeId));
-                            if (existingByPlaceId.length > 0) {
-                                console.log(`Duplicate found by placeId: ${result.name}`);
-                                continue;
-                            }
-                        }
-
-                        // Check by name + address
-                        if (result.name && result.address) {
-                            const existingByNameAddress = await db.select().from(businesses)
-                                .where(eq(businesses.name, result.name));
-                            const duplicates = existingByNameAddress.filter(b => b.address === result.address);
-                            if (duplicates.length > 0) {
-                                console.log(`Duplicate found by name+address: ${result.name}`);
-                                continue;
-                            }
-                        }
-
-                        // Save unique business
-                        await db.insert(businesses).values({
-                            searchId,
-                            sublocationId: sublocation.id,
-                            name: result.name,
-                            address: result.address,
-                            rating: result.rating,
-                            reviewsCount: result.reviewsCount,
-                            category: result.category,
-                            phone: result.phone,
-                            website: result.website,
-                            placeId: result.placeId,
-                            coordinates: result.coordinates ? JSON.stringify(result.coordinates) : null,
-                            createdAt: new Date(),
-                        });
-                        savedCount++;
-                    } catch (insertError) {
-                        console.error(`Error saving business:`, insertError);
+                // Check for duplicates by placeId first
+                if (result.placeId) {
+                    const existingByPlaceId = await db.select().from(businesses)
+                        .where(eq(businesses.placeId, result.placeId));
+                    if (existingByPlaceId.length > 0) {
+                        continue;
                     }
                 }
 
-                // Update sublocation with business count and status
-                await db.update(sublocations).set({
-                    status: 'completed',
-                    businessCount: savedCount
-                }).where(eq(sublocations.id, sublocation.id));
+                // Check by name + address
+                if (result.name && result.address) {
+                    const existingByNameAddress = await db.select().from(businesses)
+                        .where(eq(businesses.name, result.name));
+                    const duplicates = existingByNameAddress.filter(b => b.address === result.address);
+                    if (duplicates.length > 0) {
+                        continue;
+                    }
+                }
 
-                console.log(`Completed ${sublocation.name}: saved ${savedCount} businesses`);
-
-            } catch (sublocationError) {
-                console.error(`Error scraping sublocation ${sublocation.name}:`, sublocationError);
-                await db.update(sublocations).set({ status: 'failed' }).where(eq(sublocations.id, sublocation.id));
+                // Save unique business
+                await db.insert(businesses).values({
+                    searchId,
+                    sublocationId: sublocation.id,
+                    name: result.name,
+                    address: result.address,
+                    rating: result.rating,
+                    reviewsCount: result.reviewsCount,
+                    category: result.category,
+                    phone: result.phone,
+                    website: result.website,
+                    placeId: result.placeId,
+                    coordinates: result.coordinates ? JSON.stringify(result.coordinates) : null,
+                    createdAt: new Date(),
+                });
+                savedCount++;
+            } catch (insertError) {
+                console.error(`Error saving business:`, insertError);
             }
         }
 
-        // Update search to completed after scraping
-        await db.update(searches).set({
+        // Update sublocation with business count and status
+        await db.update(sublocations).set({
             status: 'completed',
-            phase: 'completed',
-            completedAt: new Date()
-        }).where(eq(searches.id, searchId));
+            businessCount: savedCount
+        }).where(eq(sublocations.id, sublocation.id));
 
-        console.log(`Search ${searchId} completed. Businesses saved, ready for selective research.`);
+        console.log(`Completed ${sublocation.name}: saved ${savedCount} businesses`);
 
     } catch (error) {
-        console.error(`Critical error in processScrap for search ${searchId}:`, error);
-
-        // Give user a chance to solve any CAPTCHA before marking as failed
-        console.log('⚠️  If there is a CAPTCHA, please solve it now!');
-        console.log('Waiting 60 seconds for CAPTCHA resolution before marking search as failed...');
-        await new Promise(resolve => setTimeout(resolve, 60000)); // 60 seconds
-
-        await db.update(searches).set({ status: 'failed' }).where(eq(searches.id, searchId));
+        console.error(`Error scraping sublocation ${sublocation.name}:`, error);
+        await db.update(sublocations).set({ status: 'failed' }).where(eq(sublocations.id, sublocation.id));
     } finally {
-        // Always clean up browser resources
-        console.log('⚠️  Final chance to solve any pending CAPTCHA!');
-        console.log('Closing browser in 30 seconds...');
-        await new Promise(resolve => setTimeout(resolve, 30000)); // 30 seconds
-
         try {
             await mapsScraper.close();
         } catch (closeError) {
-            console.error('Error during browser cleanup:', closeError);
+            console.error('Error closing browser:', closeError);
         }
     }
 }

@@ -98,11 +98,44 @@ function App() {
   const handleProceedToScraping = async () => {
     if (currentSearchId) {
       try {
+        // Just update status to scraping, don't auto-start
         await searchApi.startScraping(currentSearchId);
         setPhase('scraping');
         setStatus('scraping');
       } catch (e) {
         console.error('Error starting scraping:', e);
+      }
+    }
+  };
+
+  const handleSubLocationClick = async (sublocation: any) => {
+    if (!currentSearchId) return;
+
+    if (sublocation.status === 'completed') {
+      // Filter results for this sublocation
+      try {
+        const res = await searchApi.get(currentSearchId);
+        const allResults = res.data.results;
+        const filtered = allResults.filter((r: any) => r.sublocationId === sublocation.id);
+        setResults(filtered);
+      } catch (e) {
+        console.error('Error filtering results:', e);
+      }
+    } else if (sublocation.status === 'pending' || sublocation.status === 'failed') {
+      // Start scraping this sublocation
+      try {
+        // Optimistic update
+        setSublocations(prev => prev.map(sl =>
+          sl.id === sublocation.id ? { ...sl, status: 'scraping' } : sl
+        ));
+
+        await searchApi.scrapeSubLocation(currentSearchId, sublocation.id);
+      } catch (e) {
+        console.error('Error starting sub-location scraping:', e);
+        // Revert on error
+        setSublocations(prev => prev.map(sl =>
+          sl.id === sublocation.id ? { ...sl, status: 'failed' } : sl
+        ));
       }
     }
   };
@@ -249,17 +282,25 @@ function App() {
                     <h3 className="text-white font-semibold mb-3">Scraping Progress by Sub-Location</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {sublocations.map((sl: any) => (
-                        <div key={sl.id} className="bg-gray-700 rounded p-3">
-                          <div className="text-sm text-gray-300 truncate" title={sl.name}>{sl.name}</div>
-                          <div className={`text-xs mt-1 ${sl.status === 'completed' ? 'text-green-400' :
-                            sl.status === 'scraping' ? 'text-blue-400' :
-                              sl.status === 'failed' ? 'text-red-400' :
-                                'text-gray-400'
+                        <div
+                          key={sl.id}
+                          onClick={() => handleSubLocationClick(sl)}
+                          className={`rounded p-3 cursor-pointer transition-all border ${sl.status === 'completed' ? 'bg-green-900/20 border-green-500/30 hover:bg-green-900/30' :
+                              sl.status === 'scraping' ? 'bg-blue-900/20 border-blue-500/30 animate-pulse' :
+                                sl.status === 'failed' ? 'bg-red-900/20 border-red-500/30 hover:bg-red-900/30' :
+                                  'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                            }`}
+                        >
+                          <div className="text-sm text-white font-medium truncate" title={sl.name}>{sl.name}</div>
+                          <div className={`text-xs mt-1 flex items-center gap-1 ${sl.status === 'completed' ? 'text-green-400' :
+                              sl.status === 'scraping' ? 'text-blue-400' :
+                                sl.status === 'failed' ? 'text-red-400' :
+                                  'text-gray-400'
                             }`}>
-                            {sl.status === 'completed' && `✓ ${sl.businessCount} businesses`}
-                            {sl.status === 'scraping' && '⏳ Scraping...'}
-                            {sl.status === 'failed' && '✗ Failed'}
-                            {sl.status === 'pending' && '⋯ Pending'}
+                            {sl.status === 'completed' && <span>✓ {sl.businessCount} businesses</span>}
+                            {sl.status === 'scraping' && <span>⏳ Scraping...</span>}
+                            {sl.status === 'failed' && <span>✗ Failed (Click to retry)</span>}
+                            {sl.status === 'pending' && <span>▶ Click to scrape</span>}
                           </div>
                         </div>
                       ))}

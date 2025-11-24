@@ -35,6 +35,9 @@ export const searchApi = {
 
     startScraping: (id: string) =>
         api.post(`/search/${id}/scrape`),
+
+    scrapeSubLocation: (id: string, subId: number) =>
+        api.post(`/search/${id}/sublocations/${subId}/scrape`),
 };
 
 export const locationsApi = {

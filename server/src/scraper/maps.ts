@@ -64,20 +64,24 @@ export class MapsScraper {
         if (!this.page) await this.init();
 
         try {
-            console.log(`Navigating to Google Maps for ${location}...`);
+            console.log(`[DEBUG] Navigating to Google Maps for ${location}...`);
             await this.page!.goto(`https://www.google.com/maps/search/${encodeURIComponent(location)}`, {
                 waitUntil: 'networkidle',
                 timeout: 30000
             });
+            console.log(`[DEBUG] Navigation complete. URL: ${this.page!.url()}`);
 
             await this.checkForCaptcha();
 
             // Wait for initial load - try multiple possible selectors
+            console.log('[DEBUG] Waiting for feed or main selector...');
             await Promise.race([
                 this.page!.waitForSelector('div[role="feed"]', { timeout: 10000 }),
                 this.page!.waitForSelector('div[role="main"]', { timeout: 10000 })
-            ]).catch(() => {
-                console.log('Feed not found immediately, might be a direct place result or different layout.');
+            ]).then(() => {
+                console.log('[DEBUG] Initial selector found.');
+            }).catch((e) => {
+                console.log('[DEBUG] Feed not found immediately, might be a direct place result or different layout. Error:', e.message);
             });
 
             await this.checkForCaptcha();
@@ -118,7 +122,9 @@ export class MapsScraper {
             console.log(`Searching for ${keyword}...`);
 
             // Wait for results to load
+            console.log('[DEBUG] Waiting for search results selector...');
             await this.page!.waitForSelector('div[role="feed"]', { timeout: 15000 });
+            console.log('[DEBUG] Search results selector found.');
 
             await this.checkForCaptcha();
             await this.delay(this.REQUEST_DELAY);
@@ -192,7 +198,7 @@ export class MapsScraper {
             // Get all items (no limit!)
             const itemSelector = 'div[role="article"] > a, a[href*="/maps/place/"]';
             const items = await this.page!.$$(itemSelector);
-            console.log(`Found ${items.length} total items to process`);
+            console.log(`[DEBUG] Found ${items.length} total items to process`);
 
             // Extract ALL items
             for (let i = 0; i < items.length; i++) {
