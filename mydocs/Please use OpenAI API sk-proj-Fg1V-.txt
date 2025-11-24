@@ -1,0 +1,212 @@
+The proper steps for the app to take is
+
+1. when the app comes up
+2. Ener the Primary location
+3. Enter the keyword
+4. Click the search button
+5. The app should use exa.ai or tavily or fiecrawl to search, find and identify and catalogue all relevant sub-locations, districts, neighborhoods, and administrative divisions within that area
+6. The list should be listed out so that it can be downloaded if needed
+7. It will now start the browser to search the google maps
+8. Conduct one by one systematic keyword-driven searches on the Google Places and maps using the list of sublocations, districts, neighborhoods, administrative divisions within the primary location, scarping the complete business listings including names, addresses, coordinates, ratings, about, url, phone numbers place IDs an any other info available. All the returned search results for each sub location should be scraped
+
+
+First, the app is supposed to first search for sub locations of the main location entered: upon entering a primary location, automatically identify and catalogue all relevant sub-locations, districts, neighborhoods, and administrative divisions within that area. For each identified sub-location, conduct systematic keyword-driven searches using the Google Places and maps, scarping the complete business listings including names, addresses, coordinates, ratings, place IDs an any other info available. All the search results should be scraped, it should apply delays etc to prevent sanctions from google system, It should list out the sub locations indentified, The app is not performing the deep buisness intelligent research on each search results
+
+
+
+Create a comprehensive business intelligence application that scrapes Google Maps and Places using Playwright or Puppeteer,  it performs hierarchical location-based searches and generate detailed research reports. The system should implement a multi-tier search methodology: upon entering a primary location, automatically identify and catalogue all relevant sub-locations, districts, neighborhoods, and administrative divisions within that area. For each identified sub-location, conduct systematic keyword-driven searches using the Google Places and maps, scarping the complete business listings including names, addresses, coordinates, ratings, place IDs an any other info available using Playwright or Puppeteer.
+
+The application should then execute deep investigative research on each discovered business entity by integrating multiple data sources through APIs such as Tavily, Exa.ai, and Firecrawl to gather comprehensive intelligence including: corporate ownership structures and stakeholder information, official and verified social media handles across all major platforms, recent news coverage and media mentions, complete contact information including direct phone numbers and email addresses, professional LinkedIn profiles of key personnel and decision-makers, business registration details and regulatory filings, customer reviews and sentiment analysis, competitive landscape positioning, and any available financial or operational indicators.
+
+The system must compile all collected intelligence into structured, actionable reports that provide complete business profiles with verified contact details, social media presence mapping, recent news timeline, key personnel identification, and strategic insights. Reports should include data source attribution, confidence scores for information accuracy, timestamped research findings, and export capabilities in multiple formats (PDF, JSON, CSV). The application should implement data validation mechanisms, duplicate detection across searches, rate limiting for API calls, and a user-friendly interface for query management, result filtering, and report customization. The final deliverable should be a scalable, production-ready system that transforms basic location searches into comprehensive business intelligence packages suitable for sales prospecting, market research, competitive analysis, and lead generation purposes.
+
+
+
+
+
+
+
+Please use OpenAI API: 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
+
+use GPT 5.1
+
+Here is the results I got from chatgpt. 
+
+Here is the Google-Maps-ready version of the full Abuja sub-location list.
+Each item is formatted as:
+
+[Area], Abuja, Nigeria
+(one per line — ready to paste directly into Google Maps search)
+
+✅ GOOGLE MAPS SEARCH LIST (COPY & PASTE FRIENDLY)
+
+Abaji, Abuja, Nigeria
+Abuja Municipal Area Council, Abuja, Nigeria
+Bwari, Abuja, Nigeria
+Gwagwalada, Abuja, Nigeria
+Kuje, Abuja, Nigeria
+Kwali, Abuja, Nigeria
+Asokoro, Abuja, Nigeria
+Central Area, Abuja, Nigeria
+Garki, Abuja, Nigeria
+Garki II, Abuja, Nigeria
+Guzape I, Abuja, Nigeria
+Guzape II, Abuja, Nigeria
+Maitama, Abuja, Nigeria
+Wuse, Abuja, Nigeria
+Wuse II, Abuja, Nigeria
+Apo-Dutse, Abuja, Nigeria
+Dakibiyu, Abuja, Nigeria
+Duboyi, Abuja, Nigeria
+Durumi, Abuja, Nigeria
+Gaduwa, Abuja, Nigeria
+Gudu, Abuja, Nigeria
+Jabi, Abuja, Nigeria
+Jahi, Abuja, Nigeria
+Kado, Abuja, Nigeria
+Katampe, Abuja, Nigeria
+Kaura, Abuja, Nigeria
+Kukwaba, Abuja, Nigeria
+Mabushi, Abuja, Nigeria
+Utako, Abuja, Nigeria
+Wuye, Abuja, Nigeria
+Bunkoro, Abuja, Nigeria
+Dakwo, Abuja, Nigeria
+Dape, Abuja, Nigeria
+Galadimawa, Abuja, Nigeria
+Gwarinpa, Abuja, Nigeria
+Industrial Area, Abuja, Nigeria
+Kabusa, Abuja, Nigeria
+Kafe, Abuja, Nigeria
+Karmo, Abuja, Nigeria
+Life Camp, Abuja, Nigeria
+Lokogoma, Abuja, Nigeria
+Nbora, Abuja, Nigeria
+Okanje, Abuja, Nigeria
+Pyakasa, Abuja, Nigeria
+Saraji, Abuja, Nigeria
+Wumba, Abuja, Nigeria
+Wupa, Abuja, Nigeria
+Bude, Abuja, Nigeria
+Burun, Abuja, Nigeria
+Chafe, Abuja, Nigeria
+Gidari Bahagwo, Abuja, Nigeria
+Gwagwa, Abuja, Nigeria
+Gwari, Abuja, Nigeria
+Idogwari, Abuja, Nigeria
+Idu, Abuja, Nigeria
+Jaite, Abuja, Nigeria
+Kaba, Abuja, Nigeria
+Kagini, Abuja, Nigeria
+Karsana, Abuja, Nigeria
+Ketti, Abuja, Nigeria
+Kpoto, Abuja, Nigeria
+Mamusa, Abuja, Nigeria
+Parfun, Abuja, Nigeria
+Sabo Gida, Abuja, Nigeria
+Sheretti, Abuja, Nigeria
+Tasha, Abuja, Nigeria
+Waru-Pozema, Abuja, Nigeria
+Lugbe, Abuja, Nigeria
+Kubwa, Abuja, Nigeria
+Dawaki, Abuja, Nigeria
+Nyanya, Abuja, Nigeria
+Karu, Abuja, Nigeria
+Karshi, Abuja, Nigeria
+Orozo, Abuja, Nigeria
+Gwagwa Town, Abuja, Nigeria
+Idu Industrial, Abuja, Nigeria
+Kuje Town, Abuja, Nigeria
+Gwagwalada Town, Abuja, Nigeria
+Zuba, Abuja, Nigeria
+Dei-Dei, Abuja, Nigeria
+Sabon Lugbe, Abuja, Nigeria
+Pape, Abuja, Nigeria
+Kpeyegyi, Abuja, Nigeria
+Apo Resettlement, Abuja, Nigeria
+Apo Mechanic Village, Abuja, Nigeria
+Games Village, Abuja, Nigeria
+Wumba District, Abuja, Nigeria
+Wupa District, Abuja, Nigeria
+Gishiri, Abuja, Nigeria
+Garki Village, Abuja, Nigeria
+Mpape, Abuja, Nigeria
+Apo, Abuja, Nigeria
+Kagini District, Abuja, Nigeria
+Karsana North, Abuja, Nigeria
+Karsana South, Abuja, Nigeria
+Kado Estate, Abuja, Nigeria
+Gishiri Village, Abuja, Nigeria
+Jabi North, Abuja, Nigeria
+Jabi South, Abuja, Nigeria
+Guzape Extension, Abuja, Nigeria
+Gwarimpa 1st Avenue, Abuja, Nigeria
+Gwarimpa 2nd Avenue, Abuja, Nigeria
+Gwarimpa 3rd Avenue, Abuja, Nigeria
+A Life Camp, Abuja, Nigeria
+Police Estate, Abuja, Nigeria
+EFAB Estate, Abuja, Nigeria
+Sunny Vale Estate, Abuja, Nigeria
+Trademore Estate, Abuja, Nigeria
+Abaji Central, Abuja, Nigeria
+Abaji North East, Abuja, Nigeria
+Abaji South East, Abuja, Nigeria
+Alu Mamagi, Abuja, Nigeria
+Gawu, Abuja, Nigeria
+Gurdi, Abuja, Nigeria
+Nuku, Abuja, Nigeria
+Rimba Ebagi, Abuja, Nigeria
+Yaba, Abuja, Nigeria
+Agyana/Pandagi, Abuja, Nigeria
+Bwari Central, Abuja, Nigeria
+Byazhin, Abuja, Nigeria
+Dutse, Abuja, Nigeria
+Igu, Abuja, Nigeria
+Kawu, Abuja, Nigeria
+Kubwa Ward, Abuja, Nigeria
+Kuduru, Abuja, Nigeria
+Shere, Abuja, Nigeria
+Ushafa, Abuja, Nigeria
+Usuma, Abuja, Nigeria
+Dobi, Abuja, Nigeria
+Gwagwalada Central, Abuja, Nigeria
+Gwako, Abuja, Nigeria
+Ibwa, Abuja, Nigeria
+Ikwa, Abuja, Nigeria
+Kutunku, Abuja, Nigeria
+Paiko, Abuja, Nigeria
+Staff Quarters, Abuja, Nigeria
+Tunga Maje, Abuja, Nigeria
+Zuba Ward, Abuja, Nigeria
+Chibiri, Abuja, Nigeria
+Gaube, Abuja, Nigeria
+Gudunkariya, Abuja, Nigeria
+Gwargwada, Abuja, Nigeria
+Kabi, Abuja, Nigeria
+Kuje Central, Abuja, Nigeria
+Kujekwa, Abuja, Nigeria
+Kwaku, Abuja, Nigeria
+Rubochi, Abuja, Nigeria
+Yenche, Abuja, Nigeria
+Ashara, Abuja, Nigeria
+Dafa, Abuja, Nigeria
+Gumbo, Abuja, Nigeria
+Kilankwa, Abuja, Nigeria
+Kundu, Abuja, Nigeria
+Kwali Central, Abuja, Nigeria
+Pai, Abuja, Nigeria
+Yangoji, Abuja, Nigeria
+Yebu, Abuja, Nigeria
+Wako, Abuja, Nigeria
+City Centre, Abuja, Nigeria
+Gui, Abuja, Nigeria
+Garki Ward, Abuja, Nigeria
+Gwagwa Ward, Abuja, Nigeria
+Gwarinpa Ward, Abuja, Nigeria
+Jiwa Ward, Abuja, Nigeria
+Kabusa Ward, Abuja, Nigeria
+Karshi Ward, Abuja, Nigeria
+Karu Ward, Abuja, Nigeria
+Nyanya Ward, Abuja, Nigeria
+Orozo Ward, Abuja, Nigeria
+Wuse Ward, Abuja, Nigeria

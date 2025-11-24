@@ -1,0 +1,41 @@
+{
+  "name": "geo-server",
+  "version": "1.0.0",
+  "description": "Backend for Business Intelligence App",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push:pg"
+  },
+  "dependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "axios": "^1.6.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "drizzle-orm": "^0.29.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^6.9.1",
+    "pdfkit": "^0.14.0",
+    "pg": "^8.11.3",
+    "playwright": "^1.40.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/pdfkit": "^0.13.3",
+    "@types/pg": "^8.10.9",
+    "drizzle-kit": "^0.20.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,155 @@
+https://github.com/tolops/geomastar
+
+.env file
+
+SERVICE_FQDN_CLIENT=geo.dependifyllc.com
+SERVICE_URL_CLIENT=https://geo.dependifyllc.com
+
+
+SERVICE_FQDN_BROWSERLESS=igscg88wk8gcok8ggksw40k8.20.14.88.69.sslip.io
+SERVICE_FQDN_CLIENT=geo.dependifyllc.com
+SERVICE_FQDN_SERVER=wc4skk0sc4o8ck4g4c400wco.20.14.88.69.sslip.io
+SERVICE_URL_BROWSERLESS=http://igscg88wk8gcok8ggksw40k8.20.14.88.69.sslip.io
+SERVICE_URL_CLIENT=https://geo.dependifyllc.com
+SERVICE_URL_SERVER=http://wc4skk0sc4o8ck4g4c400wco.20.14.88.69.sslip.io
+BROWSERLESS_TOKEN=your_token_fallback
+DATABASE_URL=postgres:rXgNx0MMimBIJi4v5mJ7qHBVuwvbRQRF3K9773bG9wPGjSlavh3sszgEJPjxYSsl@20.14.88.69:5432/geomaster_bi
+JWT_SECRET=Wewecsew32323W232wr45454rc5S4tvcxvcx34276
+VITE_API_URL=https://geo.dependifyllc.com/api
+
+
+version: '3.8'
+services:
+  browserless:
+    image: 'browserless/chrome:latest'
+    container_name: geomaster-browserless
+    restart: unless-stopped
+    environment:
+      - CONCURRENT=10
+      - 'TOKEN=${BROWSERLESS_TOKEN:-your_token_fallback}'
+      - MAX_CONCURRENT_SESSIONS=10
+      - TIMEOUT=300000
+      - KEEP_ALIVE=true
+      - 'DEFAULT_LAUNCH_ARGS=["--no-sandbox","--disable-setuid-sandbox","--disable-blink-features=AutomationControlled"]'
+  postgres:
+    image: 'postgres:15-alpine'
+    container_name: geomaster-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=geomaster_bi
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=your_postgres_password_here
+    volumes:
+      - 'postgres_data:/var/lib/postgresql/data'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U postgres'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: geomaster-server
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - 'DATABASE_URL=postgres://postgres:your_postgres_password_here@postgres:5432/geomaster_bi'
+      - 'BROWSERLESS_URL=ws://browserless:3000'
+      - 'TAVILY_API_KEY=${TAVILY_API_KEY}'
+      - 'EXA_API_KEY=${EXA_API_KEY}'
+      - 'FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}'
+    depends_on:
+      browserless:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: geomaster-client
+    restart: unless-stopped
+    environment:
+      - 'VITE_API_URL=http://localhost:3000'
+    depends_on:
+      - server
+volumes:
+  postgres_data: null
+networks:
+  default:
+    name: geomaster-network
+
+2025-11-22T04:21:25.569Z browserless:server Using configuration: 
+2025-11-22T04:21:25.571Z browserless:server {
+  CONNECTION_TIMEOUT: 60000,
+  MAX_CONCURRENT_SESSIONS: 10,
+  QUEUE_LENGTH: 10,
+  SINGLE_RUN: false,
+  CHROME_REFRESH_TIME: 1800000,
+  KEEP_ALIVE: true,
+  DEFAULT_BLOCK_ADS: false,
+  DEFAULT_HEADLESS: 'new',
+  DEFAULT_LAUNCH_ARGS: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-blink-features=AutomationControlled'
+  ],
+  DEFAULT_IGNORE_DEFAULT_ARGS: false,
+  DEFAULT_IGNORE_HTTPS_ERRORS: false,
+  DEFAULT_DUMPIO: false,
+  DEFAULT_STEALTH: false,
+  DEFAULT_USER_DATA_DIR: undefined,
+  PREBOOT_CHROME: false,
+  PREBOOT_QUANTITY: 0,
+  PRINT_GET_STARTED_LINKS: true,
+  PRINT_NETWORK_INFO: true,
+  DEBUG: 'browserless*',
+  DISABLED_FEATURES: [],
+  ENABLE_CORS: false,
+  ENABLE_API_GET: false,
+  TOKEN: 'your_token_fallback',
+  ENABLE_HEAP_DUMP: false,
+  ALLOW_FILE_PROTOCOL: false,
+  DISABLE_AUTO_SET_DOWNLOAD_BEHAVIOR: false,
+  FUNCTION_BUILT_INS: [ 'url' ],
+  FUNCTION_ENV_VARS: [],
+  FUNCTION_ENABLE_INCOGNITO_MODE: false,
+  FUNCTION_EXTERNALS: [ 'lighthouse', 'node-pdftk', 'sharp' ],
+  WORKSPACE_DIR: '/usr/src/app/workspace',
+  WORKSPACE_DELETE_EXPIRED: false,
+  WORKSPACE_EXPIRE_DAYS: 30,
+  FAILED_HEALTH_URL: null,
+  QUEUE_ALERT_URL: null,
+  REJECT_ALERT_URL: null,
+  TIMEOUT_ALERT_URL: null,
+  ERROR_ALERT_URL: null,
+  SESSION_CHECK_FAIL_URL: null,
+  PRE_REQUEST_HEALTH_CHECK: false,
+  EXIT_ON_HEALTH_FAILURE: false,
+  MAX_CPU_PERCENT: 99,
+  MAX_MEMORY_PERCENT: 99,
+  METRICS_JSON_PATH: null,
+  HOST: '0.0.0.0',
+  PORT: 3000,
+  SOCKET_CLOSE_METHOD: 'http',
+  PROXY_URL: undefined,
+  MAX_PAYLOAD_SIZE: '5mb'
+}
+2025-11-22T04:21:25.572Z browserless:server 
+
+Running on port 3000
+	Localhost	 ws:localhost:3000
+	Local network	 ws:10.0.16.3:3000
+2025-11-22T04:21:25.572Z browserless:server 
+Get started at	 https://www.browserless.io/docs/start
+Get a license at	 https://www.browserless.io/sign-up?type=commercial
+Get support at	 https://www.browserless.io/contact
+
+Happy coding!
+
+
+
+

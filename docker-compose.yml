@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: geomaster-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - BROWSERLESS_URL=${BROWSERLESS_URL}
+      # API Keys - these should ideally be passed from .env file or secrets
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - EXA_API_KEY=${EXA_API_KEY}
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WEAVIATE_HOST=${WEAVIATE_HOST}
+      - WEAVIATE_API_KEY=${WEAVIATE_API_KEY}
+      - WEAVIATE_SCHEME=${WEAVIATE_SCHEME}
+    depends_on:
+      - db
+    networks:
+      - geomaster-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: geomaster-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=geomaster_bi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - geomaster-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  geomaster-network:
+    driver: bridge
