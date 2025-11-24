@@ -66,7 +66,7 @@ export class MapsScraper {
         try {
             console.log(`[DEBUG] Navigating to Google Maps for ${location}...`);
             await this.page!.goto(`https://www.google.com/maps/search/${encodeURIComponent(location)}`, {
-                waitUntil: 'networkidle',
+                waitUntil: 'domcontentloaded',
                 timeout: 30000
             });
             console.log(`[DEBUG] Navigation complete. URL: ${this.page!.url()}`);
