@@ -36,7 +36,8 @@ export class BrowserManager {
         if (!this.browser) {
             console.log('Launching local Chromium browser...');
             this.browser = await chromium.launch({
-                headless: false, // Headless false is often better for avoiding detection initially
+                headless: true, // Must be headless in production/Docker
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -46,7 +47,9 @@ export class BrowserManager {
                     '--ignore-certifcate-errors-spki-list',
                     '--disable-blink-features=AutomationControlled',
                     '--exclude-switches=enable-automation',
-                    '--disable-features=IsolateOrigins,site-per-process'
+                    '--disable-features=IsolateOrigins,site-per-process',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
                 ]
             });
         }

@@ -23,6 +23,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install Chromium and dependencies for Playwright
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Install production dependencies only (or copy from builder if needed, but clean install is safer for size)
 # However, for simplicity and ensuring all deps are present (including workspace links), we'll copy node_modules from builder for now
 # Optimization: In a real prod setup, we'd prune devDeps.
@@ -35,7 +47,6 @@ COPY --from=builder /app/server/package.json ./server/
 # Environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Expose port
 EXPOSE 3000
