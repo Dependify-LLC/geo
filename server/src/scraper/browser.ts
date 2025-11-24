@@ -21,9 +21,9 @@ export class BrowserManager {
 
         if (browserlessUrl) {
             // Connect to Browserless instance using CDP
-            // Append stealth and keepalive flags
+            // Append stealth flag if not present
             const separator = browserlessUrl.includes('?') ? '&' : '?';
-            const finalUrl = `${browserlessUrl}${separator}stealth&keepalive=true`;
+            const finalUrl = `${browserlessUrl}${separator}stealth`;
 
             console.log(`Connecting to Browserless at ${finalUrl}...`);
             try {
