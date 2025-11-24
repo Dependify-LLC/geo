@@ -10,10 +10,12 @@ import { chromium, Browser, Page, BrowserContext } from 'playwright';
 
 export class BrowserManager {
     private browser: Browser | null = null;
-    private context: BrowserContext | null = null;
 
     async init() {
-        if (this.browser) return;
+        if (this.browser) {
+            if (this.browser.isConnected()) return;
+            this.browser = null;
+        }
 
         const browserlessUrl = process.env.BROWSERLESS_URL;
 
@@ -53,41 +55,34 @@ export class BrowserManager {
                 ]
             });
         }
-
-        // For CDP connections (Browserless), use the default context if it exists
-        // For local browsers, create a new context
-        const existingContexts = this.browser.contexts();
-        if (existingContexts.length > 0) {
-            this.context = existingContexts[0];
-            console.log('Using existing browser context from CDP connection');
-        } else {
-            this.context = await this.browser.newContext({
-                viewport: { width: 1280, height: 800 },
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                locale: 'en-US',
-                timezoneId: 'America/New_York',
-                permissions: ['geolocation'],
-            });
-
-            // Add init scripts to hide automation (only for new contexts)
-            await this.context.addInitScript(() => {
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined,
-                });
-            });
-        }
     }
 
     async newPage(): Promise<Page> {
-        if (!this.context) await this.init();
-        return this.context!.newPage();
+        if (!this.browser || !this.browser.isConnected()) await this.init();
+
+        // Create a new context for every page to ensure isolation and stability
+        const context = await this.browser!.newContext({
+            viewport: { width: 1280, height: 800 },
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            locale: 'en-US',
+            timezoneId: 'America/New_York',
+            permissions: ['geolocation'],
+        });
+
+        // Add init scripts to hide automation
+        await context.addInitScript(() => {
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            });
+        });
+
+        return context.newPage();
     }
 
     async close() {
         if (this.browser) {
             await this.browser.close();
             this.browser = null;
-            this.context = null;
         }
     }
 }

@@ -105,6 +105,20 @@ export class MapsScraper {
                 return this.searchLocation(location, retries - 1);
             }
             throw new Error(`Failed to navigate to location after ${this.RETRY_ATTEMPTS} attempts`);
+        } catch (error: any) {
+            // Catch specific "Target closed" errors
+            if (error.message && (error.message.includes('Target page, context or browser has been closed') || error.message.includes('Session closed'))) {
+                console.log('[DEBUG] Browser context crashed or closed. Forcing restart...');
+                await this.close(); // Close current page/context
+                this.page = null; // Force re-init
+
+                if (retries > 0) {
+                    console.log(`Retrying with fresh context... (${retries} attempts remaining)`);
+                    await this.delay(2000);
+                    return this.searchLocation(location, retries - 1);
+                }
+            }
+            throw error;
         }
     }
 
@@ -285,9 +299,12 @@ export class MapsScraper {
     async close() {
         if (this.page) {
             try {
-                await this.page.close();
+                // Close the context (which closes the page) to clean up
+                const context = this.page.context();
+                await context.close();
+                console.log('[DEBUG] Browser context closed.');
             } catch (error) {
-                console.error('Error closing page:', error);
+                console.error('Error closing page/context:', error);
             }
             this.page = null;
         }
