@@ -21,15 +21,14 @@ export class BrowserManager {
 
         if (browserlessUrl) {
             // Connect to Browserless instance using CDP
-            // Append stealth flag if not present
-            const finalUrl = browserlessUrl.includes('?')
-                ? `${browserlessUrl}&stealth`
-                : `${browserlessUrl}?stealth`;
+            // Append stealth and keepalive flags
+            const separator = browserlessUrl.includes('?') ? '&' : '?';
+            const finalUrl = `${browserlessUrl}${separator}stealth&keepalive=true`;
 
             console.log(`Connecting to Browserless at ${finalUrl}...`);
             try {
                 this.browser = await chromium.connectOverCDP(finalUrl, {
-                    timeout: 30000,
+                    timeout: 60000, // Increased timeout for stability
                 });
                 console.log('✅ Connected to Browserless successfully');
             } catch (error) {
