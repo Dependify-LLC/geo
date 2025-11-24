@@ -86,7 +86,21 @@ export class MapsScraper {
 
             await this.checkForCaptcha();
             await this.delay(this.REQUEST_DELAY);
-        } catch (error) {
+        } catch (error: any) {
+            // 1. Check for critical "Target closed" errors first
+            if (error.message && (error.message.includes('Target page, context or browser has been closed') || error.message.includes('Session closed'))) {
+                console.log('[DEBUG] Browser context crashed or closed. Forcing restart...');
+                await this.close(); // Close current page/context
+                this.page = null; // Force re-init
+
+                if (retries > 0) {
+                    console.log(`Retrying with fresh context... (${retries} attempts remaining)`);
+                    await this.delay(2000);
+                    return this.searchLocation(location, retries - 1);
+                }
+            }
+
+            // 2. Handle standard navigation errors
             console.error(`Error navigating to location (attempt ${this.RETRY_ATTEMPTS - retries + 1}):`, error);
 
             // Check if error was caused by CAPTCHA
@@ -105,20 +119,6 @@ export class MapsScraper {
                 return this.searchLocation(location, retries - 1);
             }
             throw new Error(`Failed to navigate to location after ${this.RETRY_ATTEMPTS} attempts`);
-        } catch (error: any) {
-            // Catch specific "Target closed" errors
-            if (error.message && (error.message.includes('Target page, context or browser has been closed') || error.message.includes('Session closed'))) {
-                console.log('[DEBUG] Browser context crashed or closed. Forcing restart...');
-                await this.close(); // Close current page/context
-                this.page = null; // Force re-init
-
-                if (retries > 0) {
-                    console.log(`Retrying with fresh context... (${retries} attempts remaining)`);
-                    await this.delay(2000);
-                    return this.searchLocation(location, retries - 1);
-                }
-            }
-            throw error;
         }
     }
 
