@@ -20,29 +20,8 @@ services:
       - WEAVIATE_HOST=${WEAVIATE_HOST}
       - WEAVIATE_API_KEY=${WEAVIATE_API_KEY}
       - WEAVIATE_SCHEME=${WEAVIATE_SCHEME}
-    depends_on:
-      - db
     networks:
       - geomaster-network
-
-  db:
-    image: postgres:15-alpine
-    container_name: geomaster-db
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=geomaster_bi
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - geomaster-network
-
-volumes:
-  postgres_data:
-
 
 networks:
   geomaster-network:
