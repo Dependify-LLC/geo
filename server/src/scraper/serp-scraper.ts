@@ -24,34 +24,62 @@ export class SerpScraper {
         try {
             console.log(`[Serper] Searching for: ${query}`);
 
-            const response = await fetch(this.baseUrl, {
-                method: 'POST',
-                headers: {
-                    'X-API-KEY': this.apiKey,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    q: query
-                })
-            });
+            const allResults: BusinessResult[] = [];
+            const resultsPerPage = 20; // Serper.dev returns 20 results per page
+            const maxPages = 10; // Fetch 10 pages to get ~200 results
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Serper error: ${response.status} - ${errorText}`);
+            // Make multiple requests to get all results
+            for (let page = 1; page <= maxPages; page++) {
+                try {
+                    const response = await fetch(this.baseUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-API-KEY': this.apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            q: query,
+                            page: page
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error(`[Serper] Page ${page} error: ${response.status} - ${errorText}`);
+                        break; // Stop pagination on error
+                    }
+
+                    const data = await response.json();
+
+                    // Check for API errors
+                    if (data.error) {
+                        console.error(`[Serper] Page ${page} error: ${data.error}`);
+                        break;
+                    }
+
+                    // Parse the results from this page
+                    const pageResults = this.parseResults(data);
+
+                    if (pageResults.length === 0) {
+                        console.log(`[Serper] No more results on page ${page}, stopping pagination`);
+                        break; // No more results available
+                    }
+
+                    allResults.push(...pageResults);
+                    console.log(`[Serper] Page ${page}: Found ${pageResults.length} businesses (total: ${allResults.length})`);
+
+                    // Small delay between requests to avoid rate limiting
+                    if (page < maxPages) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                } catch (pageError: any) {
+                    console.error(`[Serper] Error on page ${page}:`, pageError.message);
+                    break; // Stop on error
+                }
             }
 
-            const data = await response.json();
-
-            // Check for API errors
-            if (data.error) {
-                throw new Error(`Serper error: ${data.error}`);
-            }
-
-            // Parse the results
-            const results = this.parseResults(data);
-            console.log(`[Serper] Found ${results.length} businesses`);
-
-            return results;
+            console.log(`[Serper] Found ${allResults.length} total businesses`);
+            return allResults;
 
         } catch (error: any) {
             console.error('[Serper] Error:', error.message);
