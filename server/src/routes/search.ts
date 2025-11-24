@@ -283,20 +283,17 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
 
         await mapsScraper.searchLocation(combinedQuery);
 
-        // Extract ALL results
-        const results = await mapsScraper.scrollAndExtract();
-        console.log(`Found ${results.length} businesses in ${sublocation.name}`);
-
-        // Save results with duplicate detection
+        // Extract and save results via streaming
         let savedCount = 0;
-        for (const result of results) {
+
+        const results = await mapsScraper.scrollAndExtract(async (result) => {
             try {
                 // Check for duplicates by placeId first
                 if (result.placeId) {
                     const existingByPlaceId = await db.select().from(businesses)
                         .where(eq(businesses.placeId, result.placeId));
                     if (existingByPlaceId.length > 0) {
-                        continue;
+                        return;
                     }
                 }
 
@@ -306,7 +303,7 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
                         .where(eq(businesses.name, result.name));
                     const duplicates = existingByNameAddress.filter(b => b.address === result.address);
                     if (duplicates.length > 0) {
-                        continue;
+                        return;
                     }
                 }
 
@@ -326,12 +323,22 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
                     createdAt: new Date(),
                 });
                 savedCount++;
-            } catch (insertError) {
-                console.error(`Error saving business:`, insertError);
-            }
-        }
 
-        // Update sublocation with business count and status
+                // Optional: Update sublocation count periodically (e.g. every 5 items)
+                if (savedCount % 5 === 0) {
+                    await db.update(sublocations).set({
+                        businessCount: savedCount
+                    }).where(eq(sublocations.id, sublocation.id));
+                }
+
+            } catch (insertError) {
+                console.error(`Error saving business ${result.name}:`, insertError);
+            }
+        });
+
+        console.log(`Found ${results.length} businesses in ${sublocation.name}`);
+
+        // Final update of sublocation with total count and status
         await db.update(sublocations).set({
             status: 'completed',
             businessCount: savedCount

@@ -164,7 +164,7 @@ export class MapsScraper {
         }
     }
 
-    async scrollAndExtract(): Promise<BusinessResult[]> {
+    async scrollAndExtract(onResult?: (result: BusinessResult) => Promise<void>): Promise<BusinessResult[]> {
         if (!this.page) throw new Error('Page not initialized');
 
         const results: BusinessResult[] = [];
@@ -179,32 +179,55 @@ export class MapsScraper {
             const maxNoChangeAttempts = 5; // Stop after 5 scrolls with no new content
 
             while (noChangeCount < maxNoChangeAttempts) {
-                // Scroll to bottom
-                const currentHeight = await this.page!.evaluate((selector) => {
+                // Scroll to bottom using human-like behavior
+                const currentHeight = await this.page!.evaluate(async (selector) => {
                     const element = document.querySelector(selector);
-                    if (element) {
-                        element.scrollTop = element.scrollHeight;
-                        return element.scrollHeight;
+                    if (!element) return 0;
+
+                    const distance = 300 + Math.floor(Math.random() * 200); // Random scroll distance
+                    const delay = 100 + Math.floor(Math.random() * 300); // Random delay
+
+                    // Smooth scroll
+                    element.scrollBy({ top: distance, behavior: 'smooth' });
+                    await new Promise(r => setTimeout(r, delay));
+
+                    // Occasionally scroll back up a bit (human-like)
+                    if (Math.random() < 0.2) {
+                        element.scrollBy({ top: -100, behavior: 'smooth' });
                     }
-                    return 0;
+
+                    // Ensure we reach bottom eventually
+                    if (element.scrollHeight - element.scrollTop < 1000) {
+                        element.scrollTop = element.scrollHeight;
+                    }
+
+                    return element.scrollHeight;
                 }, feedSelector);
 
-                // Wait for content to load
-                await this.delay(2000);
+                // Wait for content to load with random delay
+                await this.delay(2000 + Math.random() * 1000);
 
                 // Check for CAPTCHA periodically
                 await this.checkForCaptcha();
 
                 // Check if we loaded new content
-                if (currentHeight === previousHeight) {
+                // We need to check if the scrollHeight actually increased significantly or if we are just scrolling
+                // For now, let's trust the height check.
+                // Re-evaluate height after wait
+                const newHeight = await this.page!.evaluate((selector) => {
+                    const element = document.querySelector(selector);
+                    return element ? element.scrollHeight : 0;
+                }, feedSelector);
+
+                if (newHeight === previousHeight) {
                     noChangeCount++;
                     console.log(`No new content loaded (attempt ${noChangeCount}/${maxNoChangeAttempts})`);
                 } else {
                     noChangeCount = 0; // Reset counter
-                    console.log(`Loaded new content, scrollHeight: ${currentHeight}`);
+                    console.log(`Loaded new content, scrollHeight: ${newHeight}`);
                 }
 
-                previousHeight = currentHeight;
+                previousHeight = newHeight;
             }
 
             console.log('Finished scrolling, now extracting all items...');
@@ -268,15 +291,22 @@ export class MapsScraper {
                     const finalName = (details.name && details.name.length > 2) ? details.name : listName;
 
                     if (finalName) {
-                        results.push({
+                        const result = {
                             name: finalName,
                             address: details.address?.replace('Address: ', ''),
                             website: details.website || undefined,
                             phone: details.phone?.replace('Phone: ', ''),
                             rating: details.rating || undefined,
                             placeId: details.placeId || undefined,
-                        });
+                        };
+
+                        results.push(result);
                         console.log(`✓ Extracted: ${finalName} (ID: ${details.placeId})`);
+
+                        // Stream result if callback provided
+                        if (onResult) {
+                            await onResult(result);
+                        }
                     }
 
                     // Rate limiting between items
