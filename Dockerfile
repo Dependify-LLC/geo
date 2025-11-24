@@ -35,11 +35,14 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Install production dependencies only (or copy from builder if needed, but clean install is safer for size)
-# However, for simplicity and ensuring all deps are present (including workspace links), we'll copy node_modules from builder for now
-# Optimization: In a real prod setup, we'd prune devDeps.
+# Copy node_modules from builder (includes workspace root dependencies)
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
+
+# Copy server's node_modules to ensure all server dependencies are available
+COPY --from=builder /app/server/node_modules ./server/node_modules
+
+# Copy built files
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/server/package.json ./server/
