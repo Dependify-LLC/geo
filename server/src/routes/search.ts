@@ -280,19 +280,19 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
         let results: any[] = [];
         let usedSerpApi = false;
 
-        // Try SerpApi first
+        // Try Serper.dev first
         if (serpScraper.isAvailable()) {
             try {
-                console.log('[Strategy] Trying SerpApi...');
+                console.log('[Strategy] Trying Serper.dev...');
                 results = await serpScraper.searchGoogleMaps(combinedQuery);
                 usedSerpApi = true;
-                console.log(`[SerpApi] ✅ Success: Found ${results.length} businesses`);
+                console.log(`[Serper] ✅ Success: Found ${results.length} businesses`);
             } catch (serpError: any) {
-                console.error('[SerpApi] ❌ Failed:', serpError.message);
+                console.error('[Serper] ❌ Failed:', serpError.message);
                 console.log('[Strategy] Falling back to Browserless scraper...');
             }
         } else {
-            console.log('[Strategy] SerpApi not available, using Browserless scraper...');
+            console.log('[Strategy] Serper.dev not available, using Browserless scraper...');
         }
 
         // Fallback to Browserless if SerpApi failed or unavailable
