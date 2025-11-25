@@ -12,41 +12,56 @@ export class SerpScraper {
     }
 
     /**
-     * Search Google Maps using Serper.dev API
+     * Search Google Maps using Serper.dev API with pagination
+     * Uses `start` parameter for pagination and `num` for results per page
      * @param query The search query (e.g., "Real Estate around Wuse")
+     * @param maxResults Maximum total results to fetch (will paginate to reach this)
      * @returns Array of business results
      */
-    async searchGoogleMaps(query: string): Promise<BusinessResult[]> {
+    async searchGoogleMaps(query: string, maxResults: number = 200): Promise<BusinessResult[]> {
         if (!this.apiKey) {
             throw new Error('SERPAPI_KEY is not configured');
         }
 
         try {
-            console.log(`[Serper] Searching for: ${query}`);
+            console.log(`[Serper] Searching for: ${query} (target: ${maxResults} results)`);
 
             const allResults: BusinessResult[] = [];
-            const resultsPerPage = 20; // Serper.dev returns 20 results per page
-            const maxPages = 10; // Fetch 10 pages to get ~200 results
+            const resultsPerPage = 100; // Max allowed by Serper
+            let locationCoords: string | null = null;
+            let currentOffset = 0;
 
-            // Make multiple requests to get all results
-            for (let page = 1; page <= maxPages; page++) {
+            // Calculate how many pages we need
+            const totalPages = Math.ceil(maxResults / resultsPerPage);
+
+            for (let page = 1; page <= totalPages; page++) {
                 try {
+                    const requestBody: any = {
+                        q: query,
+                        num: resultsPerPage,  // Request 100 results per page
+                        start: currentOffset   // Offset for pagination
+                    };
+
+                    // For offset > 0, we MUST include GPS coordinates
+                    if (currentOffset > 0 && locationCoords) {
+                        requestBody.ll = locationCoords;
+                    }
+
+                    console.log(`[Serper] Page ${page}: Requesting ${resultsPerPage} results (offset: ${currentOffset})`);
+
                     const response = await fetch(this.baseUrl, {
                         method: 'POST',
                         headers: {
                             'X-API-KEY': this.apiKey,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            q: query,
-                            page: page
-                        })
+                        body: JSON.stringify(requestBody)
                     });
 
                     if (!response.ok) {
                         const errorText = await response.text();
                         console.error(`[Serper] Page ${page} error: ${response.status} - ${errorText}`);
-                        break; // Stop pagination on error
+                        break;
                     }
 
                     const data = await response.json();
@@ -57,29 +72,50 @@ export class SerpScraper {
                         break;
                     }
 
-                    // Parse the results from this page
+                    // On first page, extract location coordinates for subsequent requests
+                    if (page === 1 && data.searchParameters) {
+                        if (data.searchParameters.ll) {
+                            locationCoords = data.searchParameters.ll;
+                        } else if (data.places && data.places.length > 0 && data.places[0].position) {
+                            const firstResult = data.places[0].position;
+                            locationCoords = `@${firstResult.lat},${firstResult.lng},14z`;
+                        }
+                        console.log(`[Serper] Extracted coordinates: ${locationCoords}`);
+                    }
+
+                    // Parse results
                     const pageResults = this.parseResults(data);
 
                     if (pageResults.length === 0) {
-                        console.log(`[Serper] No more results on page ${page}, stopping pagination`);
-                        break; // No more results available
+                        console.log(`[Serper] No more results on page ${page}`);
+                        break;
                     }
 
                     allResults.push(...pageResults);
-                    console.log(`[Serper] Page ${page}: Found ${pageResults.length} businesses (total: ${allResults.length})`);
+                    console.log(`[Serper] Page ${page}: Got ${pageResults.length} businesses (total: ${allResults.length})`);
 
-                    // Small delay between requests to avoid rate limiting
-                    if (page < maxPages) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
+                    // If we've reached our target, stop
+                    if (allResults.length >= maxResults) {
+                        console.log(`[Serper] Reached target of ${maxResults} results`);
+                        break;
                     }
+
+                    // Move to next page (Serper recommends incrementing by 20, but we use 100)
+                    currentOffset += resultsPerPage;
+
+                    // Small delay to avoid rate limiting
+                    if (page < totalPages) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+
                 } catch (pageError: any) {
                     console.error(`[Serper] Error on page ${page}:`, pageError.message);
-                    break; // Stop on error
+                    break;
                 }
             }
 
-            console.log(`[Serper] Found ${allResults.length} total businesses`);
-            return allResults;
+            console.log(`[Serper] Completed: ${allResults.length} total businesses`);
+            return allResults.slice(0, maxResults); // Trim to requested max
 
         } catch (error: any) {
             console.error('[Serper] Error:', error.message);

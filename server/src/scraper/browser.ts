@@ -17,24 +17,38 @@ export class BrowserManager {
             this.browser = null;
         }
 
-        const browserlessUrl = process.env.BROWSERLESS_URL;
+        // Priority 1: Use local Browserless if available
+        const localBrowserlessUrl = process.env.BROWSERLESS_URL; // e.g., ws://localhost:3000
 
-        if (browserlessUrl) {
-            // Connect to Browserless instance using CDP
-            // Append stealth flag if not present
-            const separator = browserlessUrl.includes('?') ? '&' : '?';
-            const finalUrl = `${browserlessUrl}${separator}stealth`;
-
-            console.log(`Connecting to Browserless at ${finalUrl}...`);
+        if (localBrowserlessUrl) {
+            console.log(`Connecting to local Browserless at ${localBrowserlessUrl}...`);
             try {
-                this.browser = await chromium.connectOverCDP(finalUrl, {
-                    timeout: 60000, // Increased timeout for stability
+                this.browser = await chromium.connectOverCDP(localBrowserlessUrl, {
+                    timeout: 60000,
                 });
-                console.log('✅ Connected to Browserless successfully');
+                console.log('✅ Connected to local Browserless successfully');
+                return;
             } catch (error) {
-                console.error('Failed to connect to Browserless:', error);
+                console.error('Failed to connect to local Browserless:', error);
+                console.log('Trying cloud Browserless...');
+            }
+        }
+
+        // Priority 2: Use Browserless.io cloud if local fails
+        const browserlessToken = process.env.BROWSERLESS_TOKEN || '2TU82jV0f5xo1JQd6c1b0bb12f93e6f7f72dba87afac14764';
+        const browserlessEndpoint = `wss://production-sfo.browserless.io?token=${browserlessToken}`;
+
+        if (browserlessToken && !localBrowserlessUrl) {
+            console.log(`Connecting to Browserless.io cloud...`);
+            try {
+                this.browser = await chromium.connectOverCDP(browserlessEndpoint, {
+                    timeout: 60000,
+                });
+                console.log('✅ Connected to Browserless.io successfully');
+                return;
+            } catch (error) {
+                console.error('Failed to connect to Browserless.io:', error);
                 console.log('Falling back to local browser...');
-                // Fall through to local browser launch
             }
         }
 

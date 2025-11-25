@@ -238,7 +238,7 @@ function App() {
             )}
 
             {/* Phase 3 & 4: Scraping and Results */}
-            {(phase === 'scraping' || phase === 'completed') && (
+            {(phase === 'scraping' || phase === 'completed' || (phase === 'sublocation_review' && results.length > 0)) && (
               <>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -286,16 +286,16 @@ function App() {
                           key={sl.id}
                           onClick={() => handleSubLocationClick(sl)}
                           className={`rounded p-3 cursor-pointer transition-all border ${sl.status === 'completed' ? 'bg-green-900/20 border-green-500/30 hover:bg-green-900/30' :
-                              sl.status === 'scraping' ? 'bg-blue-900/20 border-blue-500/30 animate-pulse' :
-                                sl.status === 'failed' ? 'bg-red-900/20 border-red-500/30 hover:bg-red-900/30' :
-                                  'bg-gray-700 border-gray-600 hover:bg-gray-600'
+                            sl.status === 'scraping' ? 'bg-blue-900/20 border-blue-500/30 animate-pulse' :
+                              sl.status === 'failed' ? 'bg-red-900/20 border-red-500/30 hover:bg-red-900/30' :
+                                'bg-gray-700 border-gray-600 hover:bg-gray-600'
                             }`}
                         >
                           <div className="text-sm text-white font-medium truncate" title={sl.name}>{sl.name}</div>
                           <div className={`text-xs mt-1 flex items-center gap-1 ${sl.status === 'completed' ? 'text-green-400' :
-                              sl.status === 'scraping' ? 'text-blue-400' :
-                                sl.status === 'failed' ? 'text-red-400' :
-                                  'text-gray-400'
+                            sl.status === 'scraping' ? 'text-blue-400' :
+                              sl.status === 'failed' ? 'text-red-400' :
+                                'text-gray-400'
                             }`}>
                             {sl.status === 'completed' && <span>✓ {sl.businessCount} businesses</span>}
                             {sl.status === 'scraping' && <span>⏳ Scraping...</span>}
@@ -318,7 +318,7 @@ function App() {
                 <ResultsTable
                   results={results}
                   onResearchSelected={handleResearchSelected}
-                  onViewBusiness={setSelectedBusiness}
+                  onSelectBusiness={setSelectedBusiness}
                   onDownloadReport={handleDownloadReport}
                 />
               </>
