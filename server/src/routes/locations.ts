@@ -7,7 +7,7 @@ import { authenticateToken, requireAdmin, AuthRequest } from '../auth/middleware
 const router = Router();
 
 // Get all saved locations (available to all users)
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const locations = await db.select().from(savedLocations);
 

@@ -16,9 +16,14 @@ export class SerpScraper {
      * Uses `start` parameter for pagination and `num` for results per page
      * @param query The search query (e.g., "Real Estate around Wuse")
      * @param maxResults Maximum total results to fetch (will paginate to reach this)
-     * @returns Array of business results
+     * @param onResults Optional callback to handle results as they are found (for incremental saving)
+     * @returns Array of all business results found
      */
-    async searchGoogleMaps(query: string, maxResults: number = 200): Promise<BusinessResult[]> {
+    async searchGoogleMaps(
+        query: string,
+        maxResults: number = 200,
+        onResults?: (results: BusinessResult[]) => Promise<void>
+    ): Promise<BusinessResult[]> {
         if (!this.apiKey) {
             throw new Error('SERPAPI_KEY is not configured');
         }
@@ -89,6 +94,11 @@ export class SerpScraper {
                     if (pageResults.length === 0) {
                         console.log(`[Serper] No more results on page ${page}`);
                         break;
+                    }
+
+                    // Handle incremental results
+                    if (onResults) {
+                        await onResults(pageResults);
                     }
 
                     allResults.push(...pageResults);

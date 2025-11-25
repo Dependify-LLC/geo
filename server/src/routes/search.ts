@@ -269,6 +269,7 @@ async function discoverSubLocations(searchId: number, location: string) {
 }
 
 // Helper: Scrape a single sub-location
+// Helper: Scrape a single sub-location
 async function scrapeSingleSubLocation(searchId: number, keyword: string, sublocation: any) {
     try {
         console.log(`\n=== Scraping sublocation: ${sublocation.name} ===`);
@@ -277,14 +278,65 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
         const combinedQuery = `${keyword} around ${sublocation.name}`;
         console.log(`Searching for: ${combinedQuery}`);
 
-        let results: any[] = [];
+        let savedCount = 0;
+
+        // Define a helper to save results incrementally
+        const saveResults = async (batch: any[]) => {
+            for (const result of batch) {
+                try {
+                    // Check for duplicates by placeId first
+                    if (result.placeId) {
+                        const existingByPlaceId = await db.select().from(businesses)
+                            .where(eq(businesses.placeId, result.placeId));
+                        if (existingByPlaceId.length > 0) continue;
+                    }
+
+                    // Check by name + address
+                    if (result.name && result.address) {
+                        const existingByNameAddress = await db.select().from(businesses)
+                            .where(eq(businesses.name, result.name));
+                        const duplicates = existingByNameAddress.filter(b => b.address === result.address);
+                        if (duplicates.length > 0) continue;
+                    }
+
+                    // Save unique business
+                    await db.insert(businesses).values({
+                        searchId,
+                        sublocationId: sublocation.id,
+                        name: result.name,
+                        address: result.address,
+                        rating: result.rating,
+                        reviewsCount: result.reviewsCount,
+                        category: result.category,
+                        phone: result.phone,
+                        website: result.website,
+                        placeId: result.placeId,
+                        coordinates: result.coordinates ? JSON.stringify(result.coordinates) : null,
+                        confidence: 100 // High confidence for direct scrape
+                    });
+
+                    savedCount++;
+
+                    // Update sublocation count periodically
+                    if (savedCount % 5 === 0) {
+                        await db.update(sublocations)
+                            .set({ businessCount: savedCount })
+                            .where(eq(sublocations.id, sublocation.id));
+                    }
+                } catch (err) {
+                    console.error('Error saving business:', err);
+                }
+            }
+        };
+
         let usedSerpApi = false;
 
         // Try Serper.dev first
         if (serpScraper.isAvailable()) {
             try {
                 console.log('[Strategy] Trying Serper.dev...');
-                results = await serpScraper.searchGoogleMaps(combinedQuery);
+                // Pass the saveResults callback for incremental saving
+                const results = await serpScraper.searchGoogleMaps(combinedQuery, 200, saveResults);
                 usedSerpApi = true;
                 console.log(`[Serper] ✅ Success: Found ${results.length} businesses`);
             } catch (serpError: any) {
@@ -302,9 +354,11 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
                 await mapsScraper.init();
                 await mapsScraper.searchLocation(combinedQuery);
 
-                // Extract via streaming (old method)
-                results = await mapsScraper.scrollAndExtract();
-                console.log(`[Browserless] Found ${results.length} businesses`);
+                // Use streaming callback for incremental saving
+                await mapsScraper.scrollAndExtract(async (result) => {
+                    await saveResults([result]);
+                });
+                console.log(`[Browserless] Completed scraping`);
             } finally {
                 try {
                     await mapsScraper.close();
@@ -314,60 +368,13 @@ async function scrapeSingleSubLocation(searchId: number, keyword: string, subloc
             }
         }
 
-        // Save all results to database
-        let savedCount = 0;
-        for (const result of results) {
-            try {
-                // Check for duplicates by placeId first
-                if (result.placeId) {
-                    const existingByPlaceId = await db.select().from(businesses)
-                        .where(eq(businesses.placeId, result.placeId));
-                    if (existingByPlaceId.length > 0) {
-                        continue;
-                    }
-                }
-
-                // Check by name + address
-                if (result.name && result.address) {
-                    const existingByNameAddress = await db.select().from(businesses)
-                        .where(eq(businesses.name, result.name));
-                    const duplicates = existingByNameAddress.filter(b => b.address === result.address);
-                    if (duplicates.length > 0) {
-                        continue;
-                    }
-                }
-
-                // Save unique business
-                await db.insert(businesses).values({
-                    searchId,
-                    sublocationId: sublocation.id,
-                    name: result.name,
-                    address: result.address,
-                    rating: result.rating,
-                    reviewsCount: result.reviewsCount,
-                    category: result.category,
-                    phone: result.phone,
-                    website: result.website,
-                    placeId: result.placeId,
-                    coordinates: result.coordinates ? JSON.stringify(result.coordinates) : null,
-                    createdAt: new Date(),
-                });
-                savedCount++;
-
-            } catch (insertError) {
-                console.error(`Error saving business ${result.name}:`, insertError);
-            }
-        }
-
-        console.log(`Found ${results.length} businesses in ${sublocation.name}`);
-
         // Final update of sublocation with total count and status
         await db.update(sublocations).set({
             status: 'completed',
             businessCount: savedCount
         }).where(eq(sublocations.id, sublocation.id));
 
-        console.log(`Completed ${sublocation.name}: saved ${savedCount} businesses`);
+        console.log(`=== Completed sublocation: ${sublocation.name} (Saved: ${savedCount}) ===\n`);
 
     } catch (error) {
         console.error(`Error scraping sublocation ${sublocation.name}:`, error);
