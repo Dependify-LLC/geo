@@ -78,14 +78,24 @@ export class SerpScraper {
                     }
 
                     // On first page, extract location coordinates for subsequent requests
-                    if (page === 1 && data.searchParameters) {
-                        if (data.searchParameters.ll) {
+                    if (page === 1) {
+                        // Try to get coordinates from searchParameters
+                        if (data.searchParameters?.ll) {
                             locationCoords = data.searchParameters.ll;
-                        } else if (data.places && data.places.length > 0 && data.places[0].position) {
+                        } 
+                        // If not in searchParameters, extract from first result
+                        else if (data.places && data.places.length > 0 && data.places[0].position) {
                             const firstResult = data.places[0].position;
-                            locationCoords = `@${firstResult.lat},${firstResult.lng},14z`;
+                            if (firstResult.lat && firstResult.lng) {
+                                locationCoords = `@${firstResult.lat},${firstResult.lng},14z`;
+                            }
                         }
-                        console.log(`[Serper] Extracted coordinates: ${locationCoords}`);
+                        
+                        if (locationCoords) {
+                            console.log(`[Serper] Extracted coordinates: ${locationCoords}`);
+                        } else {
+                            console.warn(`[Serper] Warning: Could not extract coordinates. Pagination may not work properly.`);
+                        }
                     }
 
                     // Parse results

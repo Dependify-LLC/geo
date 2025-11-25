@@ -124,7 +124,12 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     const { id } = req.params;
 
     try {
-        // Delete all sublocations first
+        // First, nullify the savedLocationId in any searches that reference this location
+        await db.update(searches)
+            .set({ savedLocationId: null })
+            .where(eq(searches.savedLocationId, Number(id)));
+
+        // Delete all sublocations
         await db.delete(sublocations).where(eq(sublocations.savedLocationId, Number(id)));
 
         // Delete the location
