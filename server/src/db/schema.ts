@@ -36,7 +36,6 @@ export const sublocations = pgTable('sublocations', {
     type: text('type').notNull(), // 'neighborhood', 'district', etc.
     status: text('status').default('pending'), // 'pending', 'scraping', 'completed', 'failed'
     businessCount: integer('business_count').default(0),
-    lastCompletedPage: integer('last_completed_page').default(0), // Track pagination progress for Serper
     createdAt: timestamp('created_at').defaultNow(),
 });
 
